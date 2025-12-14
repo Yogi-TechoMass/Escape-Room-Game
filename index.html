@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hungry Island Escape</title>
+    <title>Hungry Island Escape (Timed)</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -114,7 +114,24 @@
             white-space: pre-wrap;
             margin-top: 40px;
         }
+        
+        /* Timer Bar Styling */
+        #timer-bar-container {
+            width: 100%;
+            background-color: #555;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            height: 20px;
+        }
 
+        #timer-bar {
+            height: 100%;
+            width: 100%;
+            background-color: #ff4500;
+            border-radius: 5px;
+            transition: width 10s linear; /* Smooth transition over 10 seconds */
+        }
+        
         /* Initial background style (for the intro image) */
         #game-bg {
             position: fixed;
@@ -140,12 +157,13 @@
     <div class="game-container" id="game-container">
         <div id="intro-screen">
             <h1>Escape from Hungry Island</h1>
-            <p class="question-text">You've been stranded on a dangerous island rumored to be inhabited by cannibals. Solve the cryptic puzzles to find your escape route. The wrong choice could be your last. Click to start the ominous music and begin your journey...</p>
+            <p class="question-text">You've been stranded on a dangerous island rumored to be inhabited by cannibals. Solve the cryptic puzzles to find your escape route. **Warning: You only have 10 seconds per question!** Click to start the ominous music and begin your journey...</p>
             <button class="intro-button" onclick="startGame()">Start Escape</button>
         </div>
 
         <div id="quiz-screen" style="display: none;">
             <h2 id="question-number">Question X</h2>
+            <div id="timer-bar-container"><div id="timer-bar"></div></div>
             <p class="question-text" id="question-text"></p>
             <div class="options-container" id="options-container">
                 </div>
@@ -214,6 +232,10 @@
         ];
 
         let currentQuestionIndex = 0;
+        let timerTimeout; // To hold the main timeout for the question
+        let answered = false; // Flag to prevent multiple answers/timeout triggers
+        const TIME_LIMIT = 10000; // 10 seconds in milliseconds
+        
         const bgMusic = document.getElementById('bg-music');
         const gameContainer = document.getElementById('game-container');
         const introScreen = document.getElementById('intro-screen');
@@ -225,6 +247,7 @@
         const feedbackEl = document.getElementById('feedback');
         const hintTextEl = document.getElementById('hint-text');
         const gameBgEl = document.getElementById('game-bg');
+        const timerBarEl = document.getElementById('timer-bar');
 
         function startGame() {
             // Start music on user interaction
@@ -235,8 +258,56 @@
             quizScreen.style.display = 'block';
             loadQuestion();
         }
+        
+        function startTimer() {
+            // Reset timer bar appearance and animation
+            timerBarEl.style.transition = 'none';
+            timerBarEl.style.width = '100%';
+
+            // Force a reflow to apply the reset style before starting the transition
+            void timerBarEl.offsetWidth; 
+
+            // Start the transition and the main timeout
+            timerBarEl.style.transition = `width ${TIME_LIMIT / 1000}s linear`;
+            timerBarEl.style.width = '0%';
+            
+            // Set the timeout for when the time runs out
+            timerTimeout = setTimeout(() => {
+                if (!answered) {
+                    handleTimeout();
+                }
+            }, TIME_LIMIT);
+        }
+
+        function handleTimeout() {
+            answered = true; // Mark as answered to prevent multiple triggers
+            const currentQ = questions[currentQuestionIndex];
+            
+            // Disable all buttons 
+            const buttons = optionsContainerEl.querySelectorAll('.option-button');
+            buttons.forEach(button => button.disabled = true);
+
+            feedbackEl.className = 'feedback incorrect-feedback';
+            feedbackEl.textContent = 'Time ran out! You must be quicker.';
+            
+            // Display the hint
+            hintTextEl.textContent = currentQ.hint;
+            hintTextEl.style.display = 'block';
+
+            // Allow the user to try again after a brief pause
+            setTimeout(() => {
+                answered = false; // Reset answered flag
+                feedbackEl.textContent = '';
+                hintTextEl.style.display = 'none';
+                buttons.forEach(button => button.disabled = false);
+                startTimer(); // Restart the timer
+            }, 3000); // 3-second penalty/re-try grace period
+        }
 
         function loadQuestion() {
+            clearTimeout(timerTimeout); // Clear any existing timer
+            answered = false; // Reset answered flag
+
             if (currentQuestionIndex >= questions.length) {
                 showFinalScreen();
                 return;
@@ -264,13 +335,24 @@
                 button.onclick = () => checkAnswer(index, currentQ.answer, currentQ.hint);
                 optionsContainerEl.appendChild(button);
             });
+            
+            // Start the 10-second countdown
+            startTimer();
         }
 
         function checkAnswer(selectedIndex, correctAnswerIndex, hint) {
-            // Disable all buttons temporarily
+            if (answered) return; // Prevent answering if already answered or timed out
+
+            clearTimeout(timerTimeout); // Stop the clock immediately
+            answered = true; // Mark as answered
+
+            // Disable all buttons 
             const buttons = optionsContainerEl.querySelectorAll('.option-button');
             buttons.forEach(button => button.disabled = true);
 
+            // Stop the timer bar animation
+            timerBarEl.style.transition = 'none'; 
+            
             if (selectedIndex === correctAnswerIndex) {
                 feedbackEl.className = 'feedback correct-feedback';
                 feedbackEl.textContent = 'Correct! The path is now clear.';
@@ -288,14 +370,19 @@
                 hintTextEl.textContent = hint;
                 hintTextEl.style.display = 'block';
 
-                // Re-enable buttons
+                // Re-enable buttons and restart timer after a brief pause
                 setTimeout(() => {
+                    answered = false; // Reset answered flag
+                    feedbackEl.textContent = '';
+                    hintTextEl.style.display = 'none';
                     buttons.forEach(button => button.disabled = false);
-                }, 500);
+                    startTimer(); // Restart the timer
+                }, 3000); // 3-second penalty/re-try grace period
             }
         }
 
         function showFinalScreen() {
+            clearTimeout(timerTimeout);
             quizScreen.style.display = 'none';
             finalScreen.style.display = 'block';
             gameBgEl.style.backgroundImage = 'none'; // Clear the background image
