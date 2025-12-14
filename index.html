@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hungry Island Escape</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #0d0d0d;
+            color: #e0e0e0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            background-size: cover;
+            background-position: center;
+            transition: background-image 1s ease-in-out;
+        }
+
+        .game-container {
+            background-color: rgba(30, 30, 30, 0.95);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(255, 69, 0, 0.5);
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            color: #ff4500;
+            margin-bottom: 20px;
+        }
+
+        .question-text {
+            font-size: 1.2em;
+            margin-bottom: 30px;
+            white-space: pre-wrap; /* For multiline questions */
+        }
+
+        .options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .option-button {
+            background-color: #444;
+            color: #fff;
+            border: 2px solid #ff4500;
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s, transform 0.1s;
+            text-align: left;
+        }
+
+        .option-button:hover {
+            background-color: #666;
+        }
+
+        .option-button:active {
+            transform: scale(0.98);
+        }
+
+        .intro-button, .start-button {
+            background-color: #ff4500;
+            color: #fff;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1em;
+            margin-top: 20px;
+            transition: background-color 0.3s;
+        }
+
+        .intro-button:hover, .start-button:hover {
+            background-color: #cc3700;
+        }
+
+        .hint {
+            color: #ffa07a;
+            margin-top: 20px;
+            font-style: italic;
+            border: 1px dashed #ffa07a;
+            padding: 10px;
+            border-radius: 5px;
+            display: none; /* Hidden by default */
+        }
+
+        .feedback {
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        .correct-feedback {
+            color: #3cb371; /* Medium Sea Green */
+        }
+
+        .incorrect-feedback {
+            color: #f08080; /* Light Coral */
+        }
+
+        .final-message {
+            font-size: 1.5em;
+            color: #3cb371;
+            white-space: pre-wrap;
+            margin-top: 40px;
+        }
+
+        /* Initial background style (for the intro image) */
+        #game-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            background-image: url('img1.jpg'); /* Intro image */
+            transition: background-image 1s ease-in-out;
+            z-index: -1;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-bg"></div>
+    <audio id="bg-music" loop preload="auto">
+        <source src="horror_music.mp3" type="audio/mp3">
+        Your browser does not support the audio element.
+    </audio>
+
+    <div class="game-container" id="game-container">
+        <div id="intro-screen">
+            <h1>Escape from Hungry Island</h1>
+            <p class="question-text">You've been stranded on a dangerous island rumored to be inhabited by cannibals. Solve the cryptic puzzles to find your escape route. The wrong choice could be your last. Click to start the ominous music and begin your journey...</p>
+            <button class="intro-button" onclick="startGame()">Start Escape</button>
+        </div>
+
+        <div id="quiz-screen" style="display: none;">
+            <h2 id="question-number">Question X</h2>
+            <p class="question-text" id="question-text"></p>
+            <div class="options-container" id="options-container">
+                </div>
+            <div class="feedback" id="feedback"></div>
+            <div class="hint" id="hint-text"></div>
+        </div>
+
+        <div id="final-screen" style="display: none;">
+            <h1>ESCAPE SUCCESSFUL!</h1>
+            <p class="final-message">Every path upward ends in watching Not moving <br>I am not the start,<br>But I end all climbs</p>
+            <p style="margin-top: 30px; font-size: 1.1em;">You have survived the trial of the Hungry Island.</p>
+        </div>
+    </div>
+
+    <script>
+        const questions = [
+            {
+                q: "You reach the island and see three paths. Only one is safe. A board says:\n“Choose the path that survivors take.”\nWhich path do you choose?",
+                options: ["Path with skeletons", "Path with fresh footprints", "Path with no footprints", "Path with animal bones"],
+                answer: 1, // Index of the correct option (0-indexed)
+                hint: "Hint: You are looking for a sign that someone **alive** and recent has passed through.",
+                image: 'img2.jpg'
+            },
+            {
+                q: "You find a locked door with a code:\nThe clue says:\n“Hungry Island has 3 tribes. Each tribe eats every 2 days. After 6 days, how many meals?”",
+                options: ["3", "6", "9", "12"],
+                answer: 2,
+                hint: "Hint: The total number of meals is the number of tribes multiplied by the number of days, divided by the eating interval. \n(3 tribes * 6 days) / 2 days per meal = ?",
+                image: 'img3.jpg'
+            },
+            {
+                q: "A message says:\n“Only even-numbered rocks are safe. The sum of rock numbers is 26.”\nWhich pair is safe?",
+                options: ["12 & 14", "10 & 4", "8 & 2", "7 & 5"],
+                answer: 0,
+                hint: "Hint: The rule specifies **even-numbered** rocks, and their **Sum** must be 26. Check which option has two even numbers that add up to 26.",
+                image: 'img4.jpg'
+            },
+            {
+                q: "You find three idols:\nIdol of Teeth, Idol of Fire, Idol of Smoke.\nA prophecy says: “Choose the one that saves you from hungry peoples\"",
+                options: ["Teeth", "Fire", "Smoke", "All of them"],
+                answer: 1,
+                hint: "Hint: The item that can **burn anything** or is often used to keep dangerous animals/people away is the key.",
+                image: 'img5.jpg'
+            },
+            {
+                q: "A cannibal island trap has three possible triggers:\nA feather, a stone, and a bone.\nClue says: “Pick the object they worship\"",
+                options: ["Feather", "Stone", "Bone", "None"],
+                answer: 2,
+                hint: "Hint: They are cannibals, often associated with the remnants of their victims. The answer is **not a stone**.",
+                image: 'img6.jpg'
+            },
+            {
+                q: "A cannibal chant echoes:\n“Two shadows walk, but only one is alive.”\nYou see two shadows approaching. What should you do?",
+                options: ["Run toward them", "Light a fire", "Hide behind rocks", "Shout for help"],
+                answer: 2,
+                hint: "Hint: The best action is to **not reveal yourself** to the approaching figures.",
+                image: 'img7.jpg'
+            },
+            {
+                q: "A stone puzzle says:\n“Cannibals fear what they cannot see, but smell what is near.”\nWhich tool helps you avoid them?",
+                options: ["Torch", "Perfume", "Mud", "Sharp knife"],
+                answer: 2,
+                hint: "Hint: Cannibals may track by scent. The tool must mask your scent. Be careful, as **they find perfume smell** highly noticeable and unusual.",
+                image: 'img8.jpg'
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        const bgMusic = document.getElementById('bg-music');
+        const gameContainer = document.getElementById('game-container');
+        const introScreen = document.getElementById('intro-screen');
+        const quizScreen = document.getElementById('quiz-screen');
+        const finalScreen = document.getElementById('final-screen');
+        const questionNumberEl = document.getElementById('question-number');
+        const questionTextEl = document.getElementById('question-text');
+        const optionsContainerEl = document.getElementById('options-container');
+        const feedbackEl = document.getElementById('feedback');
+        const hintTextEl = document.getElementById('hint-text');
+        const gameBgEl = document.getElementById('game-bg');
+
+        function startGame() {
+            // Start music on user interaction
+            bgMusic.volume = 0.4;
+            bgMusic.play().catch(e => console.log("Audio playback failed:", e));
+
+            introScreen.style.display = 'none';
+            quizScreen.style.display = 'block';
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            if (currentQuestionIndex >= questions.length) {
+                showFinalScreen();
+                return;
+            }
+
+            const currentQ = questions[currentQuestionIndex];
+
+            // Update background image
+            gameBgEl.style.backgroundImage = `url('${currentQ.image}')`;
+
+            // Reset elements
+            feedbackEl.textContent = '';
+            hintTextEl.style.display = 'none';
+            optionsContainerEl.innerHTML = '';
+
+            // Update question content
+            questionNumberEl.textContent = `Question ${currentQuestionIndex + 1} of ${questions.length}`;
+            questionTextEl.textContent = currentQ.q;
+
+            // Populate options
+            currentQ.options.forEach((option, index) => {
+                const button = document.createElement('button');
+                button.classList.add('option-button');
+                button.textContent = String.fromCharCode(65 + index) + '. ' + option; // A., B., C., etc.
+                button.onclick = () => checkAnswer(index, currentQ.answer, currentQ.hint);
+                optionsContainerEl.appendChild(button);
+            });
+        }
+
+        function checkAnswer(selectedIndex, correctAnswerIndex, hint) {
+            // Disable all buttons temporarily
+            const buttons = optionsContainerEl.querySelectorAll('.option-button');
+            buttons.forEach(button => button.disabled = true);
+
+            if (selectedIndex === correctAnswerIndex) {
+                feedbackEl.className = 'feedback correct-feedback';
+                feedbackEl.textContent = 'Correct! The path is now clear.';
+
+                // Wait a moment then load the next question
+                setTimeout(() => {
+                    currentQuestionIndex++;
+                    loadQuestion();
+                }, 1500);
+            } else {
+                feedbackEl.className = 'feedback incorrect-feedback';
+                feedbackEl.textContent = 'Incorrect. Try again...';
+                
+                // Display the hint
+                hintTextEl.textContent = hint;
+                hintTextEl.style.display = 'block';
+
+                // Re-enable buttons
+                setTimeout(() => {
+                    buttons.forEach(button => button.disabled = false);
+                }, 500);
+            }
+        }
+
+        function showFinalScreen() {
+            quizScreen.style.display = 'none';
+            finalScreen.style.display = 'block';
+            gameBgEl.style.backgroundImage = 'none'; // Clear the background image
+            gameContainer.style.backgroundColor = 'rgba(20, 20, 20, 0.95)';
+            bgMusic.pause();
+            bgMusic.currentTime = 0; // Stop the music
+        }
+
+        // Initial setup for the intro screen (ensure the first image is the background)
+        gameBgEl.style.backgroundImage = `url('img1.jpg')`;
+    </script>
+</body>
+</html>
